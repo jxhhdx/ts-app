@@ -2,47 +2,83 @@
     <div id="app">
         <div class="search-input">
             <i class="iconfont icon-search"></i>
-            <input type="text" placeholder="搜索歌曲" v-model="searchWord" @input="handleToSuggest" @keyup.13="handleToList(searchWord)"/>
-            <i class="iconfont icon-close" v-if="searchType != 1" @click="handleToClose"></i>
+            <input
+                type="text"
+                placeholder="搜索歌曲"
+                v-model="searchWord"
+                @input="handleToSuggest"
+                @keyup.13="handleToList(searchWord)"
+            />
+            <i
+                class="iconfont icon-close"
+                v-if="searchType != 1"
+                @click="handleToClose"
+            ></i>
         </div>
-        <template v-if="searchType==1">
+        <template v-if="searchType == 1">
             <div class="search-history">
                 <div class="search-history-head">
                     <span>历史记录</span>
-                    <i class="iconfont icon-ashbin" @click="handleToCloseHistory"></i>
+                    <i
+                        class="iconfont icon-ashbin"
+                        @click="handleToCloseHistory"
+                    ></i>
                 </div>
                 <div class="search-history-list">
-                    <div v-for="(item, index) in searchHistory" :key="index" @click="handleToList(item)">{{ item }}</div>
+                    <div
+                        v-for="(item, index) in searchHistory"
+                        :key="index"
+                        @click="handleToList(item)"
+                    >
+                        {{ item }}
+                    </div>
                 </div>
             </div>
             <div class="search-hot">
                 <div class="search-hot-head">热搜榜</div>
-                <div class="search-hot-item" v-for="(item, index) in searchHot" :key="index">
+                <div
+                    class="search-hot-item"
+                    v-for="(item, index) in searchHot"
+                    :key="index"
+
+                >
                     <div class="search-hot-top">{{ index + 1 }}</div>
                     <div class="search-hot-word">
-                        <div>{{ item.searchWord }}<img :src="item.iconUrl?item.iconUrl:''" /></div>
+                        <div>
+                            {{ item.searchWord
+                            }}<img v-show="item.iconUrl" :src="item.iconUrl" />
+                        </div>
                         <div>{{ item.content }}</div>
                     </div>
                     <span class="search-hot-count">{{ item.score }}</span>
                 </div>
             </div>
         </template>
-        <template v-else-if="searchType==2">
+        <template v-else-if="searchType == 2">
             <div class="search-result">
-                <div class="search-result-item" v-for="(item, index) in searchList" :key="index">
+                <div
+                    class="search-result-item"
+                    v-for="(item, index) in searchList"
+                    :key="index"
+                >
                     <div class="search-result-word">
                         <div>{{ item.name }}</div>
-                        <div>{{ item.artists[0].name }} – {{ item.album.name }}</div>
+                        <div>
+                            {{ item.artists[0].name }} – {{ item.album.name }}
+                        </div>
                     </div>
                     <i class="iconfont icon-play"></i>
                 </div>
             </div>
         </template>
-        <template v-else-if="searchType==3">
+        <template v-else-if="searchType == 3">
             <div class="search-suggest">
                 <div class="search-suggest-head">搜索“ {{ searchWord }} ”</div>
                 {{ searchSuggest[0].keywords }}
-                <div class="search-suggest-item" v-for="(item, index) in searchSuggest" :key="index"
+                <div
+                    class="search-suggest-item"
+                    v-for="(item, index) in searchSuggest"
+                    :key="index"
                     @click="handleToList(item.keyword)"
                 >
                     <i class="iconfont icon-search"></i>{{ item.keyword }}
@@ -54,89 +90,145 @@
 
 <script>
 import "@/assets/iconfont/iconfont.css";
+import { reactive, ref, toRefs, onMounted } from "@vue/composition-api";
 import axios from "axios";
 export default {
     name: "App",
-    data() {
+    setup() {
+        const searchType = ref(1);
+        const searchWord = ref("");
+        const { searchHot } = useSearchhot();
+        const { handleToSuggest, searchSuggest } = useSearchSuggest(
+            searchWord,
+            searchType
+        );
+        const { handleToCloseHistory, searchHistory, setHistory } = useSearchHistory();
+        const { searchList, handleToList, handleToClose } = useSearchList(searchWord, searchType, function(word) {
+            setHistory(word)
+        });
+
         return {
-            searchType: 1,
-            searchHot: [],
-            searchWord: '',
-            searchSuggest: [],
-            searchList: [],
-            searchHistory: [],
+            searchType, // 查找类型
+            searchWord, // 查找文本
+            searchSuggest,
+            searchHot,
+            searchHistory,
+            searchList,
+            handleToClose,
+            handleToCloseHistory,
+            handleToList,
+            handleToSuggest,
         };
     },
-    mounted() {
-        axios.get("/search/hot/detail").then((res) => {
-            this.searchHot = res.data.data
-        });
-        this.getStorage({
-            key: 'history',
-            success: (data)=>{
-                this.searchHistory = data 
-            }
-        })
-    },
-    methods: {
-        handleToCloseHistory(){
-            this.removeStorage({
-                key: 'history',
-                success:()=>{
-                    this.searchHistory = []
-                }
-            })
-        },
-        getSearchList(){
-            axios.get(`/search?keywords=${this.searchWord}`).then((res)=>{
-                this.searchList = res.data.result.songs;
-                this.searchType = 2;
-            })
-        },
-        handleToList(word){
-            this.searchWord = word;
-
-            this.searchHistory.unshift(word);
-
-            this.searchHistory = [...new Set(this.searchHistory)]
-            if(this.searchHistory.length > 10){
-                this.searchHistory.length = 10;
-            }
-
-            this.setStorage({
-                key : "history",
-                data : this.searchHistory
-            })
-
-            this.getSearchList()
-        },
-        handleToClose(){
-            this.searchWord = '';
-            this.searchType = 1;
-        },
-        handleToSuggest() {
-            if(!this.searchWord){  
-                this.searchType = 1;
-                return ;
-            }
-            axios.get(`/search/suggest?keywords=${this.searchWord}&type=mobile`).then((res)=>{
-                this.searchSuggest = res.data.result.allMatch;
-                this.searchType = 3;
-            })
-        },
-        setStorage({ key, data }) {
-            window.localStorage.setItem(key, JSON.stringify(data));
-        },
-        getStorage({ key, success }){ 
-            let data = window.localStorage.getItem(key);
-            success(JSON.parse(data))
-        },
-        removeStorage({ key, success }){ 
-            window.localStorage.removeItem(key);
-            success()
-        },
-    }
 };
+function useSearchSuggest(searchWord, searchType) {
+    const state = reactive({
+        searchSuggest: [],
+    });
+    const { searchSuggest } = toRefs(state);
+    const handleToSuggest = () => {
+        if (!searchWord.value) {
+            searchType.value = 1;
+            return;
+        }
+        axios
+            .get(`/search/suggest?keywords=${searchWord.value}&type=mobile`)
+            .then((res) => {
+                state.searchSuggest = res.data.result.allMatch;
+                searchType.value = 3;
+            });
+    };
+    return { handleToSuggest, searchSuggest };
+}
+function useSearchList(searchWord, searchType, callback) {
+    const state = reactive({
+        searchList: [],
+    });
+    const { searchList } = toRefs(state)
+    const getSearchList = () => {
+        axios.get(`/search?keywords=${searchWord.value}`).then((res) => {
+            state.searchList = res.data.result.songs;
+            searchType.value = 2;
+        });
+    };
+    const handleToList = word => {
+        searchWord.value = word;
+        callback(word);
+        getSearchList();
+    };
+    const handleToClose = () => {
+        searchWord.value = "";
+        searchType.value = 1;
+    };
+    return {
+        searchList,
+        handleToList,
+        handleToClose,
+    };
+}
+function useSearchHistory() {
+    const state = reactive({
+        searchHistory: [],
+    });
+    const { searchHistory } = toRefs(state);
+
+    
+
+    const handleToCloseHistory = () => {
+        removeStorage({
+            key: "history",
+            success: () => {
+                state.searchHistory = [];
+            },
+        });
+    };
+
+    const setHistory = (word) => {
+        state.searchHistory.unshift(word);
+        state.searchHistory = [...new Set(state.searchHistory)];
+        if (state.searchHistory.length > 10) {
+            state.searchHistory.length = 10;
+        }
+
+        setStorage({
+            key: "history",
+            data: state.searchHistory,
+        });
+    };
+
+    onMounted(() => {
+        getStorage({
+            key: "history",
+            success: (data) => {
+                state.searchHistory = data;
+            },
+        });
+    });
+    return { handleToCloseHistory, searchHistory, setHistory };
+}
+function useSearchhot() {
+    const state = reactive({
+        searchHot: [],
+    });
+    onMounted(() => {
+        axios.get("/search/hot/detail").then((res) => {
+            state.searchHot = res.data.data;
+        });
+    });
+    return toRefs(state);
+}
+
+function setStorage({ key, data }) {
+    window.localStorage.setItem(key, JSON.stringify(data));
+}
+function getStorage({ key, success }) {
+    let data = window.localStorage.getItem(key);
+    success(JSON.parse(data));
+}
+function removeStorage({ key, success }) {
+    window.localStorage.removeItem(key);
+    success();
+}
 </script>
 
 <style>
