@@ -5,7 +5,7 @@
             <input type="text" placeholder="搜索歌曲" />
             <i class="iconfont icon-close"></i>
         </div>
-        <!-- <div class="search-history">
+        <div class="search-history">
             <div class="search-history-head">
                 <span>历史记录</span>
                 <i class="iconfont icon-ashbin"></i>
@@ -14,8 +14,8 @@
                 <div>少年</div>
                 <div>如果遇见他</div>
             </div>
-        </div> -->
-        <!-- <div class="search-hot">
+        </div>
+        <div class="search-hot">
             <div class="search-hot-head">热搜榜</div>
             <div class="search-hot-item">
                 <div class="search-hot-top">1</div>
@@ -25,8 +25,8 @@
                 </div>
                 <span class="search-hot-count">2968644</span>
             </div>
-        </div> -->
-        <!-- <div class="search-result">
+        </div>
+        <div class="search-result">
           <div class="search-result-item">
               <div class="search-result-word ">
                   <div>少年</div>
@@ -41,7 +41,7 @@
               </div>
               <i class="iconfont icon-play"></i>
           </div>
-        </div> -->
+        </div>
         <div class="search-suggest">
           <div class="search-suggest-head">搜索“少年”</div>
           <div class="search-suggest-item">
