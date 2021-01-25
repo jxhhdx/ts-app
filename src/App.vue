@@ -1,5 +1,6 @@
 <template>
     <div id="app">
+        <HelloWorld />
         <div class="search-input">
             <i class="iconfont icon-search"></i>
             <input
@@ -40,7 +41,6 @@
                     class="search-hot-item"
                     v-for="(item, index) in searchHot"
                     :key="index"
-
                 >
                     <div class="search-hot-top">{{ index + 1 }}</div>
                     <div class="search-hot-word">
@@ -88,25 +88,47 @@
     </div>
 </template>
 
-<script>
+<script lang="ts">
 import "@/assets/iconfont/iconfont.css";
-import { reactive, ref, toRefs, onMounted } from "@vue/composition-api";
+import {
+    reactive,
+    ref,
+    toRefs,
+    onMounted,
+    defineComponent,
+    Ref,
+} from "@vue/composition-api";
 import axios from "axios";
-export default {
+import { providestore } from "./useSearchWord";
+import HelloWorld from "./components/HelloWorld.vue";
+
+export default defineComponent({
     name: "App",
+    components: {
+        HelloWorld,
+    },
     setup() {
         const searchType = ref(1);
         const searchWord = ref("");
+        providestore(searchWord);
+
         const { searchHot } = useSearchhot();
         const { handleToSuggest, searchSuggest } = useSearchSuggest(
             searchWord,
             searchType
         );
-        const { handleToCloseHistory, searchHistory, setHistory } = useSearchHistory();
-        const { searchList, handleToList, handleToClose } = useSearchList(searchWord, searchType, function(word) {
-            setHistory(word)
-        });
-
+        const {
+            handleToCloseHistory,
+            searchHistory,
+            setHistory,
+        } = useSearchHistory();
+        const { searchList, handleToList, handleToClose } = useSearchList(
+            searchWord,
+            searchType,
+            function (word: string) {
+                setHistory(word);
+            }
+        );
         return {
             searchType, // 查找类型
             searchWord, // 查找文本
@@ -120,8 +142,8 @@ export default {
             handleToSuggest,
         };
     },
-};
-function useSearchSuggest(searchWord, searchType) {
+});
+function useSearchSuggest(searchWord: Ref<string>, searchType: Ref<number>) {
     const state = reactive({
         searchSuggest: [],
     });
@@ -140,18 +162,18 @@ function useSearchSuggest(searchWord, searchType) {
     };
     return { handleToSuggest, searchSuggest };
 }
-function useSearchList(searchWord, searchType, callback) {
+function useSearchList(searchWord: Ref<string>, searchType: Ref<number>, callback: (word: string)=> void) {
     const state = reactive({
         searchList: [],
     });
-    const { searchList } = toRefs(state)
+    const { searchList } = toRefs(state);
     const getSearchList = () => {
         axios.get(`/search?keywords=${searchWord.value}`).then((res) => {
             state.searchList = res.data.result.songs;
             searchType.value = 2;
         });
     };
-    const handleToList = word => {
+    const handleToList = (word: string) => {
         searchWord.value = word;
         callback(word);
         getSearchList();
@@ -167,12 +189,13 @@ function useSearchList(searchWord, searchType, callback) {
     };
 }
 function useSearchHistory() {
-    const state = reactive({
+    type Data = {
+        searchHistory : string[];
+    };
+    const state: Data = reactive({
         searchHistory: [],
     });
     const { searchHistory } = toRefs(state);
-
-    
 
     const handleToCloseHistory = () => {
         removeStorage({
@@ -182,24 +205,21 @@ function useSearchHistory() {
             },
         });
     };
-
-    const setHistory = (word) => {
+    const setHistory = (word: string) => {
         state.searchHistory.unshift(word);
         state.searchHistory = [...new Set(state.searchHistory)];
         if (state.searchHistory.length > 10) {
             state.searchHistory.length = 10;
         }
-
         setStorage({
             key: "history",
             data: state.searchHistory,
         });
     };
-
     onMounted(() => {
         getStorage({
             key: "history",
-            success: (data) => {
+            success: data => {
                 state.searchHistory = data;
             },
         });
@@ -217,15 +237,19 @@ function useSearchhot() {
     });
     return toRefs(state);
 }
-
-function setStorage({ key, data }) {
+function setStorage({ key, data }: { key: string, data: string[] }) {
     window.localStorage.setItem(key, JSON.stringify(data));
 }
-function getStorage({ key, success }) {
+function getStorage({ key, success }: {key: string, success: (arg:[]) => void }) {
     let data = window.localStorage.getItem(key);
-    success(JSON.parse(data));
+    if(typeof data === "string"){
+        success(JSON.parse(data));
+    } else {
+        success([])
+    }
+    
 }
-function removeStorage({ key, success }) {
+function removeStorage({ key, success }: {key: string, success: () => void }) {
     window.localStorage.removeItem(key);
     success();
 }
@@ -270,7 +294,6 @@ function removeStorage({ key, success }) {
     margin-bottom: 15px;
     background: #f7f7f7;
 }
-
 .search-hot {
     margin: 0 15px;
     font-size: 14px;
@@ -305,7 +328,6 @@ function removeStorage({ key, success }) {
 .search-hot-count {
     color: #878787;
 }
-
 .search-result {
     border-top: 1px #e4e4e4 solid;
     padding: 15px;
@@ -331,7 +353,6 @@ function removeStorage({ key, success }) {
     font-size: 30px;
     color: #878787;
 }
-
 .search-suggest {
     border-top: 1px#e4e4e4 solid;
     padding: 15px;
